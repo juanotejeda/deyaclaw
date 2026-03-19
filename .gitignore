@@ -1,0 +1,12 @@
+# Binario compilado
+deyaclaw
+
+# Config con API keys
+config.json
+
+# Sesiones con historial potencialmente sensible
+sessions/
+
+# Archivos temporales
+*.log
+*.tmp
