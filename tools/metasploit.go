@@ -15,7 +15,9 @@ type MetasploitTool struct{}
 func (m *MetasploitTool) Name() string { return "metasploit" }
 
 func (m *MetasploitTool) Description() string {
-	return "Ejecuta módulos de Metasploit. Params: module (ej: auxiliary/scanner/ssh/ssh_version), " +
+	return "Ejecuta módulos de Metasploit Framework usando msfconsole. " +
+		"USA ESTA TOOL (no shell) para cualquier módulo de Metasploit. " +
+		"Params: module (ej: auxiliary/scanner/ssh/ssh_version), " +
 		"options (string: \"CLAVE=VALOR CLAVE2=VALOR2\", ej: \"RHOSTS=127.0.0.1 RPORT=22\"), " +
 		"timeout (opcional, segundos, default 120)."
 }
@@ -39,13 +41,13 @@ func (m *MetasploitTool) Execute(params map[string]string) Result {
 	}
 
 	var script strings.Builder
-	script.WriteString(fmt.Sprintf("use %s\n", module))
+	script.WriteString(fmt.Sprintf("use %s; ", module))
 
 	// Auto-detectar LHOST si es exploit y no vino en options
 	rawOptions := params["options"]
 	if strings.HasPrefix(module, "exploit/") && !strings.Contains(rawOptions, "LHOST=") {
 		if lhost := detectLocalIP(); lhost != "" {
-			script.WriteString(fmt.Sprintf("set LHOST %s\n", lhost))
+			script.WriteString(fmt.Sprintf("set LHOST %s; ", lhost))
 		}
 	}
 
@@ -57,14 +59,13 @@ func (m *MetasploitTool) Execute(params map[string]string) Result {
 				key := strings.TrimSpace(parts[0])
 				val := strings.TrimSpace(parts[1])
 				if key != "" && val != "" {
-					script.WriteString(fmt.Sprintf("set %s %s\n", key, val))
+					script.WriteString(fmt.Sprintf("set %s %s; ", key, val))
 				}
 			}
 		}
 	}
 
-	script.WriteString("run\n")
-	script.WriteString("exit\n")
+	script.WriteString("run; exit")
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -75,6 +76,9 @@ func (m *MetasploitTool) Execute(params map[string]string) Result {
 	cmd := exec.CommandContext(ctx, "msfconsole", "-q", "-x", script.String())
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
+
+	fmt.Printf("=== MSF SCRIPT ===\n%s\n==================; ", script.String())
+	
 
 	if err := cmd.Run(); err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
@@ -88,33 +92,33 @@ func (m *MetasploitTool) Execute(params map[string]string) Result {
 		return Result{ToolName: m.Name(), Error: fmt.Errorf("%s: %s", err, stderr.String())}
 	}
 
-	parsed := parseMsfOutput(out.String())
-	return Result{ToolName: m.Name(), Output: parsed}
+	fmt.Printf("=== MSF RAW OUTPUT ===\n%s\n======================; ", out.String()) // <-- acá
+
+	return Result{ToolName: m.Name(), Output: out.String()}
 }
 
-// parseMsfOutput intenta filtrar ruido de msfconsole y dejar solo lo relevante.
+// parseMsfOutput filtra el ruido de msfconsole y devuelve las líneas relevantes.
 func parseMsfOutput(raw string) string {
 	var sb strings.Builder
 
-	lines := strings.Split(raw, "\n")
+	lines := strings.Split(raw, "")
 
-	// 1) Si encontramos explícitamente la versión SSH, la devolvemos clara.
-	for _, line := range lines {
-		l := strings.TrimSpace(line)
-		if l == "" {
-			continue
-		}
-		// Ejemplo: "[*] 127.0.0.1 - SSH server version: SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u7"
-		if strings.Contains(l, "SSH server version:") {
-			sb.WriteString("[+] Resultado Metasploit — SSH version\n")
-			sb.WriteString(l + "\n")
-			return sb.String()
-		}
-	}
+	skip := regexp.MustCompile(`(?i)^(metasploit|msf6|msf5|msf >|msf6 >|=[=]+|\*=+|,=+|Type|----|encryption\.|Note|Value)`)
 
-	// 2) Si no hay línea de versión explícita, extraemos todas las líneas interesantes.
-	skip := regexp.MustCompile(`(?i)^(metasploit|msf6|msf >|=[=]+)$`)
-	interesting := regexp.MustCompile(`(?i)(SSH server version|Key Fingerprint|Server Information|Scanned .* hosts|Auxiliary module execution completed|error|fail|\[\+\]|\[!\])`)
+	interesting := regexp.MustCompile(`(?i)(` +
+		`SSH server version` +
+		`|Key Fingerprint` +
+		`|Server Information` +
+		`|Scanned .* host` +
+		`|Auxiliary module execution completed` +
+		`|exploit completed` +
+		`|Meterpreter session` +
+		`|Command shell session` +
+		`|error|fail` +
+		`|\[\+\]` +
+		`|\[\*\]` +
+		`|\[!\]` +
+		`)`)
 
 	for _, line := range lines {
 		l := strings.TrimSpace(line)
@@ -125,15 +129,16 @@ func parseMsfOutput(raw string) string {
 			continue
 		}
 		if interesting.MatchString(l) {
-			sb.WriteString(l + "\n")
+			sb.WriteString(l + "")
 		}
 	}
 
 	if sb.Len() == 0 {
-		return "Módulo ejecutado, pero no se encontró output relevante (puede que no haya hosts que respondan o que el servicio no devuelva banner)."
+		return "Módulo ejecutado sin output relevante (el servicio puede no responder o no devolver banner)."
 	}
 	return sb.String()
 }
+
 
 // detectLocalIP obtiene la IP local principal (primer IP reportada por hostname -I).
 func detectLocalIP() string {

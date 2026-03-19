@@ -195,6 +195,7 @@ func main() {
 	qFlag        := flag.String("q", "", "consulta directa sin modo interactivo (single-shot)")
 	sesionFlag := flag.String("sesion", "", "nombre de sesión a cargar o crear")
 	autonomoFlag := flag.Bool("autonomo", false, "modo autónomo sin confirmación de acciones")
+	providerFlag := flag.String("provider", "", "proveedor LLM: ollama o openrouter")
 	flag.Parse()
 
 	if *versionFlag {
@@ -230,6 +231,10 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("\n  🔰 Perfil cargado: %s\n", cfg.Mode)
+	}
+
+	if *providerFlag != "" {
+		cfg.Provider = *providerFlag
 	}
 
 	if *autonomoFlag {

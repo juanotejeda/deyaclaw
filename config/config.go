@@ -39,7 +39,7 @@ func Default() *Config {
 	home, _ := os.UserHomeDir()
 	return &Config{
 		OllamaURL:    "http://localhost:11434",
-		Model:        "llama3.2:3b",
+		Model:        "tinyllama:latest",
 		Timeout:      300,
 		Mode:         "general",
 		Temperature:  0.7,

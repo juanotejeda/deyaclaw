@@ -230,7 +230,7 @@ func New(cfg *config.Config) *Agent {
 	registry.Register(&tools.CVESearchTool{})
 	registry.Register(&tools.ExploitSearchTool{})
 	registry.Register(&tools.PortScanTool{})
-	 registry.Register(&tools.CheckEnvTool{})
+	registry.Register(&tools.CheckEnvTool{})
 
 	exec := executor.New(registry, !cfg.Autonomous)
 	systemPrompt := BuildSystemPrompt(cfg.Mode) + `
@@ -284,8 +284,8 @@ func (a *Agent) injectSysContext() {
 	result  := sysinfo.Execute(map[string]string{})
 
 	output := result.Output
-	if len(output) > 3000 {
-		output = output[:3000] + "\n... [truncado]"
+	if len(output) > 6000 {
+		output = output[:6000] + "\n... [truncado]"
 	}
 
 	a.history = append(a.history, ollama.Message{
@@ -490,8 +490,8 @@ func (a *Agent) chat(scanner *bufio.Scanner) (string, error) {
 
 		output := result.String()
 		output = tools.SanitizeOutput(output)
-		if len(output) > 3000 {
-			output = output[:3000] + "\n... [output truncado para no exceder contexto]"
+		if len(output) > 6000 {
+			output = output[:6000] + "\n... [output truncado para no exceder contexto]"
 		}
 
 		a.history = append(a.history, ollama.Message{
@@ -623,6 +623,47 @@ func (a *Agent) handleCommand(input string, scanner *bufio.Scanner) bool {
 		}
 		return true
 
+	case "/provider":
+	    providers := []struct {
+	        name  string
+	        label string
+	    }{
+	        {"ollama", "🖥️  Ollama (local)"},
+	        {"openrouter", "☁️  OpenRouter (remoto)"},
+	    }
+	
+	    fmt.Printf("\n%s🔌 Proveedor activo: %s%s\n\n", green, a.cfg.Provider, reset)
+	    for i, p := range providers {
+	        active := ""
+	        if p.name == a.cfg.Provider {
+	            active = yellow + " ← activo" + reset
+	        }
+	        fmt.Printf("  %s[%d]%s  %s%s\n", green, i+1, reset, p.label, active)
+	    }
+	    fmt.Printf("\n  Ingresá el número (Enter para cancelar): ")
+	
+	    if !scanner.Scan() {
+	        return true
+	    }
+	    choice := strings.TrimSpace(scanner.Text())
+	    if choice == "" {
+	        return true
+	    }
+	    idx := -1
+	    for i := range providers {
+	        if choice == fmt.Sprintf("%d", i+1) {
+	            idx = i
+	            break
+	        }
+	    }
+	    if idx == -1 {
+	        fmt.Println("  ❌ Opción inválida.")
+	        return true
+	    }
+	    a.cfg.Provider = providers[idx].name
+	    fmt.Printf("  ✅ Proveedor cambiado a: %s\n", a.cfg.Provider)
+	    return true
+	    
 	case "/tools":
 		fmt.Printf("\n%s🔧 Herramientas disponibles:%s\n\n", green, reset)
 		for _, t := range a.registry.All() {

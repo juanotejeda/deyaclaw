@@ -26,7 +26,9 @@ type ShellTool struct{}
 func (s *ShellTool) Name() string { return "shell" }
 
 func (s *ShellTool) Description() string {
-	return "Ejecuta comandos del sistema en whitelist. Params: cmd (comando completo)"
+	return "Ejecuta comandos del sistema. SOLO para: nmap, whois, dig, curl, ping, " +
+		"traceroute, netstat, ss, gobuster, nikto. " +
+		"NO usar para msfconsole ni Metasploit (usar tool 'metasploit' para eso)."
 }
 
 func (s *ShellTool) Execute(params map[string]string) Result {
