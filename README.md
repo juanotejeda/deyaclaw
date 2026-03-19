@@ -64,8 +64,11 @@ tareas ofensivas y defensivas de forma autónoma, encadenando herramientas de se
 git clone https://github.com/juanotejeda/deyaclaw.git
 cd deyaclaw
 go build -o deyaclaw .
-Uso
-bash
+```
+
+### Uso
+
+```bash
 # Modo interactivo con perfil RedTeam y autonomía activada
 ./deyaclaw -perfil redteam -autonomo
 
@@ -74,60 +77,63 @@ bash
 
 # Con proveedor OpenRouter
 ./deyaclaw -perfil redteam -autonomo -provider openrouter
-Comandos internos
-Comando	Acción
-/ayuda	Muestra ayuda
-/modo redteam	Cambia el perfil del agente
-salir	Cierra el agente
-🗺️ Roadmap
-v0.2 — Explotación real en laboratorio
- Lab de pruebas documentado: guía para levantar Metasploitable2/3 o contenedor vulnerable
-(vsftpd 2.3.4, Tomcat, etc.) para pruebas de explotación end-to-end.
+```
 
- Flujo CVE → módulo Metasploit automático: cuando el agente encuentre un CVE con módulo
-conocido, propondrá directamente el módulo a usar sin intervención del usuario.
+### Comandos internos
 
- parseMsfOutput mejorado: interpretación correcta de banners, sesiones abiertas
-(shell/meterpreter) y errores de Metasploit, sin perder información en el filtrado.
+| Comando          | Acción                              |
+|------------------|-------------------------------------|
+| `/ayuda`         | Muestra ayuda                       |
+| `/modo redteam`  | Cambia el perfil del agente         |
+| `salir`          | Cierra el agente                    |
 
- Nivel de autonomía "full auto": en modo -autonomo, el agente sigue su propio plan
-recomendado sin necesidad de que el usuario elija // entre pasos.
+---
 
-v0.3 — Reporte y persistencia
- Exportación de reportes: generar reportes en Markdown o PDF al finalizar una sesión
-(/reporte pdf).
+## 🗺️ Roadmap
 
- Persistencia de sesión: guardar historial de hallazgos entre sesiones (SQLite o JSON).
+### v0.2 — Explotación real en laboratorio
 
- Modo scan continuo: monitoreo periódico de un target y alerta ante cambios
-(nuevo puerto abierto, nueva versión, nuevo CVE publicado).
+- [ ] **Lab de pruebas documentado**: guía para levantar Metasploitable2/3 o contenedor vulnerable
+  (vsftpd 2.3.4, Tomcat, etc.) para pruebas de explotación end-to-end.
+- [ ] **Flujo CVE → módulo Metasploit automático**: cuando el agente encuentre un CVE con módulo
+  conocido, propondrá directamente el módulo a usar sin intervención del usuario.
+- [ ] **`parseMsfOutput` mejorado**: interpretación correcta de banners, sesiones abiertas
+  (shell/meterpreter) y errores de Metasploit, sin perder información en el filtrado.
+- [ ] **Nivel de autonomía "full auto"**: en modo `-autonomo`, el agente sigue su propio plan
+  recomendado sin necesidad de que el usuario elija entre pasos.
 
-v0.4 — Nuevas tools y perfiles
- Tool: nikto → análisis de vulnerabilidades web.
+### v0.3 — Reporte y persistencia
 
- Tool: sqlmap → detección y explotación de inyecciones SQL.
+- [ ] **Exportación de reportes**: generar reportes en Markdown o PDF al finalizar una sesión (`/reporte pdf`).
+- [ ] **Persistencia de sesión**: guardar historial de hallazgos entre sesiones (SQLite o JSON).
+- [ ] **Modo scan continuo**: monitoreo periódico de un target y alerta ante cambios
+  (nuevo puerto abierto, nueva versión, nuevo CVE publicado).
 
- Tool: hydra → ataques de fuerza bruta a servicios (SSH, FTP, HTTP).
+### v0.4 — Nuevas tools y perfiles
 
- Perfil forense → análisis de logs, detección de IOCs, análisis de artefactos.
+- [ ] **Tool: `nikto`** → análisis de vulnerabilidades web.
+- [ ] **Tool: `sqlmap`** → detección y explotación de inyecciones SQL.
+- [ ] **Tool: `hydra`** → ataques de fuerza bruta a servicios (SSH, FTP, HTTP).
+- [ ] **Perfil `forense`** → análisis de logs, detección de IOCs, análisis de artefactos.
+- [ ] **Perfil `osint`** → reconocimiento pasivo avanzado (theHarvester, Shodan, Censys).
 
- Perfil osint → reconocimiento pasivo avanzado (theHarvester, Shodan, Censys).
+### v0.5 — UX y autonomía avanzada
 
-v0.5 — UX y autonomía avanzada
- Flag -objetivo: definir el target directamente desde la línea de comandos.
+- [ ] **Flag `-objetivo`**: definir el target directamente desde la línea de comandos.
+- [ ] **Flag `-plan`**: ejecutar un plan de fases completo sin intervención humana.
+- [ ] **Soporte multi-target**: gestionar múltiples IPs/rangos en una sola sesión.
+- [ ] **Modo servidor (API REST)**: exponer el agente como servicio para integraciones externas.
 
- Flag -plan: ejecutar un plan de fases completo sin intervención humana.
+---
 
- Soporte multi-target: gestionar múltiples IPs/rangos en una sola sesión.
+## 🧠 Estado de desarrollo (contexto interno)
 
- Modo servidor (API REST): exponer el agente como servicio para integraciones externas.
+> Esta sección documenta el estado técnico real del proyecto para mantener continuidad
+> entre sesiones de desarrollo.
 
-🧠 Estado de desarrollo (contexto interno)
-Esta sección documenta el estado técnico real del proyecto para mantener continuidad
-entre sesiones de desarrollo.
+### Arquitectura actual
 
-Arquitectura actual
-text
+```
 deyaclaw/
 ├── main.go               # Entry point, flags (-perfil, -autonomo, -provider)
 ├── agent/agent.go        # Loop principal (chat, confirmAction, isSafeTool)
@@ -149,41 +155,47 @@ deyaclaw/
     ├── websearch.go      # Búsqueda web OSINT
     ├── sysinfo.go        # Info del sistema local
     └── sanitize.go       # Sanitización de inputs
-Lógica de autonomía (agent.go)
-isSafeTool(action string) bool: devuelve false solo para shell y metasploit.
-Todo lo demás se ejecuta sin confirmación en modo autónomo.
+```
 
-confirmAction(preview string) bool: muestra ⚡ DeyaClaw quiere ejecutar: y acepta
-s/si/sí como confirmación.
+### Lógica de autonomía (agent.go)
 
-En modo -autonomo: las tools seguras se ejecutan directo; shell y metasploit
-siguen pidiendo confirmación explícita al usuario.
+- `isSafeTool(action string) bool`: devuelve `false` solo para `shell` y `metasploit`.
+  Todo lo demás se ejecuta sin confirmación en modo autónomo.
+- `confirmAction(preview string) bool`: muestra `⚡ DeyaClaw quiere ejecutar:` y acepta
+  `s/si/sí` como confirmación.
+- En modo `-autonomo`: las tools seguras se ejecutan directo; `shell` y `metasploit`
+  siguen pidiendo confirmación explícita al usuario.
 
-Problema conocido activo: parseMsfOutput
-parseMsfOutput en tools/metasploit.go filtra demasiado agresivamente el output de
-msfconsole. Las líneas con [*] (informativas de Metasploit) son descartadas porque
-el regex de important no las captura.
+### Problema conocido activo: parseMsfOutput
 
-Próximo fix: ampliar el regex para incluir líneas [*] que contengan datos relevantes
-(versión, fingerprint, IP, Scanned, completed).
+`parseMsfOutput` en `tools/metasploit.go` filtra demasiado agresivamente el output de
+`msfconsole`. Las líneas con `[*]` (informativas de Metasploit) son descartadas porque
+el regex de `important` no las captura.
 
-Integración Metasploit
-El modelo a veces manda options como map[RHOSTS:127.0.0.1 RPORT:22] en lugar
-de string "RHOSTS=127.0.0.1 RPORT=22". Se instruyó al modelo en el prompt para
-usar siempre formato string.
+**Próximo fix**: ampliar el regex para incluir líneas `[*]` que contengan datos relevantes
+(versión, fingerprint, IP, `Scanned`, `completed`).
 
-Execute en metasploit.go parsea el string con strings.Fields +
-strings.SplitN(opt, "=", 2).
+### Integración Metasploit
 
-El módulo auxiliary/scanner/ssh/ssh_version funciona correctamente invocado directo
-desde msfconsole, pero el output con [*] no es capturado por el filtro actual.
+- El modelo a veces manda `options` como `map[RHOSTS:127.0.0.1 RPORT:22]` en lugar
+  de string `"RHOSTS=127.0.0.1 RPORT=22"`. Se instruyó al modelo en el prompt para
+  usar siempre formato string.
+- `Execute` en `metasploit.go` parsea el string con `strings.Fields` +
+  `strings.SplitN(opt, "=", 2)`.
+- El módulo `auxiliary/scanner/ssh/ssh_version` funciona correctamente invocado directo
+  desde `msfconsole`, pero el output con `[*]` no es capturado por el filtro actual.
 
-⚠️ Disclaimer
-DeyaClaw está diseñado para uso en entornos de laboratorio controlados y sistemas propios.
-El uso de este software contra sistemas sin autorización explícita es ilegal y va en contra
+---
+
+## ⚠️ Disclaimer
+
+DeyaClaw está diseñado para uso en **entornos de laboratorio controlados y sistemas propios**.
+El uso de este software contra sistemas sin autorización explícita es **ilegal** y va en contra
 de la ética del hacking responsable. Los autores no se responsabilizan por el uso indebido
 de esta herramienta.
 
-📄 Licencia
-MIT
+---
 
+## 📄 Licencia
+
+MIT
