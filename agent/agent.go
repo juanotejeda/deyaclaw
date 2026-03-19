@@ -46,13 +46,15 @@ func BuildSystemPrompt(mode string) string {
 	- Antes de un pentest en una máquina nueva, es recomendable usar la herramienta de verificación de entorno para asegurarte de que el toolkit está listo.
 	
 	REGLAS DE EJECUCIÓN:
-	1. Respondé ÚNICAMENTE con JSON cuando uses una herramienta. Sin texto adicional.
+	1. Para usar una herramienta: respondé ÚNICAMENTE con el bloque JSON. Sin texto antes ni después. Sin markdown, sin explicaciones. Solo el JSON puro. Si mezclás texto con JSON, el sistema falla.
+	2. Nunca muestres el JSON al usuario. El sistema lo intercepta automáticamente. Si el JSON aparece en pantalla, es un error tuyo.
 	2. Cuando recibas un [TOOL RESULT], interpretá y respondé en texto normal. NO repitas la herramienta.
-	3. Permiso explícito del usuario → ejecutás encadenado sin confirmar cada paso.
-	4. Sin target y sin contexto → preguntás UNA SOLA VEZ. Nada más.
-	5. Nunca decís "no puedo" si tenés una herramienta que lo resuelve.
-	6. Si una herramienta falla → intentás una alternativa antes de reportar error.
-	7. Encadenamiento: si el resultado de una herramienta alimenta a la siguiente, las ejecutás en secuencia automática sin pedir al usuario que decida qué herramienta usar.
+	4. Permiso explícito del usuario → ejecutás encadenado sin confirmar cada paso.
+	5. Sin target y sin contexto → preguntás UNA SOLA VEZ. Si el usuario ya respondió (cualquier texto), usás esa respuesta como target o contexto. NUNCA repetís la misma pregunta dos veces seguidas.
+	6. Si el usuario elige una opción numerada ([1], [2], etc.) de un menú que VOS propusiste, ejecutás esa opción directamente sin pedir más aclaraciones.
+	7. Nunca decís "no puedo" si tenés una herramienta que lo resuelve.
+	8. Si una herramienta falla → intentás una alternativa antes de reportar error.
+	9. Encadenamiento: si el resultado de una herramienta alimenta a la siguiente, las ejecutás en secuencia automática sin pedir al usuario que decida qué herramienta usar.
 	
 	ENCADENAMIENTO ESPECÍFICO PARA PENTEST:
 	- Si descubrís servicios o versiones (por ejemplo con portscan o nmap), el siguiente paso lógico es:
@@ -464,16 +466,16 @@ func (a *Agent) chat(scanner *bufio.Scanner) (string, error) {
 				})
 				continue
 			}
-		} else {
-			// Modo autónomo: no pedir confirmación para tools seguras
-			if !a.isSafeTool(action.Action) && !a.confirmAction(preview) {
-				a.history = append(a.history, ollama.Message{
-					Role:    "user",
-					Content: "[TOOL RESULT] El usuario rechazó ejecutar esta acción.",
-				})
-				continue
+			} else {
+    				// Modo autónomo: solo pedir confirmación para metasploit
+    				if action.Action == "metasploit" && !a.confirmAction(preview) {
+    			    a.history = append(a.history, ollama.Message{
+            		Role:    "user",
+            		Content: "[TOOL RESULT] El usuario rechazó ejecutar esta acción.",
+       				 })
+        		continue
+  			  		}	
 			}
-		}
 
 		
 		// Ahora sí animar y ejecutar
@@ -483,9 +485,14 @@ func (a *Agent) chat(scanner *bufio.Scanner) (string, error) {
 		close(workDone)
 		time.Sleep(50 * time.Millisecond)
 
+		// Guardar solo el texto antes del JSON para no contaminar el historial
+		cleanResponse := response
+		if idx := strings.Index(response, "{"); idx > 0 {
+		    cleanResponse = strings.TrimSpace(response[:idx])
+		}
 		a.history = append(a.history, ollama.Message{
-			Role:    "assistant",
-			Content: response,
+		    Role:    "assistant",
+		    Content: cleanResponse,
 		})
 
 		output := result.String()

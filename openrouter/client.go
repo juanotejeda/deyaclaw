@@ -79,8 +79,11 @@ func (c *Client) Chat(messages []Message) (string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("OpenRouter respondió con status %d", resp.StatusCode)
+    	var errBody bytes.Buffer
+    	errBody.ReadFrom(resp.Body)
+    		return "", fmt.Errorf("OpenRouter respondió con status %d: %s", resp.StatusCode, errBody.String())
 	}
+
 
 	var result Response
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {

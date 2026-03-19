@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"os"
+	"path/filepath"
 )
 
 type CVESearchTool struct{}
@@ -17,13 +19,28 @@ func (t *CVESearchTool) Name() string { return "cvesearch" }
 func (t *CVESearchTool) Description() string {
 	return "Busca CVEs en NVD. Params: query (uno o varios separados por coma, ej: 'openssh 9.2,samba 4.6'), severity (opcional: LOW,MEDIUM,HIGH,CRITICAL)"
 }
+func loadMsfModules() map[string]string {
+    home, err := os.UserHomeDir()
+    if err != nil {
+        return nil
+    }
+    data, err := os.ReadFile(filepath.Join(home, ".deyaclaw", "msf_modules.json"))
+    if err != nil {
+        return nil
+    }
+    var m map[string]string
+    if err := json.Unmarshal(data, &m); err != nil {
+        return nil
+    }
+    return m
+}
 
 func (t *CVESearchTool) Execute(params map[string]string) Result {
 	query := params["query"]
 	if query == "" {
 		return Result{ToolName: t.Name(), Error: fmt.Errorf("parámetro 'query' requerido")}
 	}
-
+	msfModules := loadMsfModules()
 	queries := strings.Split(query, ",")
 	var sb strings.Builder
 	totalFound := 0
@@ -50,6 +67,11 @@ func (t *CVESearchTool) Execute(params map[string]string) Result {
 			sb.WriteString(fmt.Sprintf("┌─ %s [%s | %.1f]\n", c.ID, c.Severity, c.Score))
 			sb.WriteString(fmt.Sprintf("│  %s\n", c.Description))
 			sb.WriteString(fmt.Sprintf("└─ https://nvd.nist.gov/vuln/detail/%s\n\n", c.ID))
+			if msfModules != nil {
+			    if msf, ok := msfModules[c.ID]; ok {
+			        sb.WriteString(fmt.Sprintf("   🎯 MSF: %s\n", msf))
+			            							}
+								}
 		}
 	}
 

@@ -34,7 +34,10 @@ func (s *ShellTool) Description() string {
 func (s *ShellTool) Execute(params map[string]string) Result {
 	cmd := params["cmd"]
 	if cmd == "" {
-		return Result{ToolName: s.Name(), Error: fmt.Errorf("parámetro 'cmd' requerido")}
+	    cmd = params["command"]
+	}
+	if cmd == "" {
+	    return Result{ToolName: s.Name(), Error: fmt.Errorf("parámetro 'cmd' requerido")}
 	}
 
 	parts := strings.Fields(cmd)

@@ -94,14 +94,14 @@ func (m *MetasploitTool) Execute(params map[string]string) Result {
 
 	fmt.Printf("=== MSF RAW OUTPUT ===\n%s\n======================; ", out.String()) // <-- acá
 
-	return Result{ToolName: m.Name(), Output: out.String()}
+	return Result{ToolName: m.Name(), Output: parseMsfOutput(out.String())}
 }
 
 // parseMsfOutput filtra el ruido de msfconsole y devuelve las líneas relevantes.
 func parseMsfOutput(raw string) string {
 	var sb strings.Builder
 
-	lines := strings.Split(raw, "")
+	lines := strings.Split(raw, "\n")
 
 	skip := regexp.MustCompile(`(?i)^(metasploit|msf6|msf5|msf >|msf6 >|=[=]+|\*=+|,=+|Type|----|encryption\.|Note|Value)`)
 
