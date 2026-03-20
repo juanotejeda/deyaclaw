@@ -2,48 +2,113 @@
 
 **Agente autónomo de ciberseguridad local**, powered by [Ollama](https://ollama.com) / [OpenRouter](https://openrouter.ai).
 
-DeyaClaw es un agente de ciberseguridad que opera desde tu terminal, capaz de planificar y ejecutar
-tareas ofensivas y defensivas de forma autónoma, encadenando herramientas de seguridad reales
-(nmap, Metasploit, búsqueda de CVEs, etc.) guiadas por un LLM local o remoto.
+DeyaClaw es un agente de ciberseguridad que opera desde tu terminal y coordina herramientas reales
+(nmap, Metasploit, búsqueda de CVEs, etc.) guiado por un LLM local o remoto. No es “magia negra”:
+su objetivo es ayudarte a **pensar y ejecutar mejor** en laboratorios y entornos controlados,
+no “hackear solo”.
 
 ---
 
 ## ✅ Estado actual (v0.1.1)
 
-### Lo que ya funciona
+### Qué hace hoy, de forma razonablemente estable
 
-- **Perfiles de agente**: RedTeam, BlueTeam, Docente, General.
-- **Modo autónomo** (`-autonomo`): el agente encadena herramientas sin pedir confirmación para
-  acciones seguras; solo pide confirmación explícita para `shell` y `metasploit`.
-- **Pipeline RedTeam completo**:
-  - `checkenv` → verifica herramientas disponibles.
-  - `portscan` → escaneo de puertos con nmap (top100, all, custom).
+- **Perfiles de agente**:  
+  - `redteam` → ofensivo, orientado a encontrar y explotar vulnerabilidades.
+  - `blueteam` → defensivo, orientado a exposición, riesgo y mitigaciones.
+  - `docente` → explica cada paso y resultado.
+  - `general` → modo genérico.
+
+- **Modo autónomo** (`-autonomo`):  
+  - Encadena herramientas “seguras” sin pedir confirmación.  
+  - Siempre pide confirmación explícita para acciones sensibles (`shell` y `metasploit`).
+
+- **Pipeline RedTeam básico pero funcional**:
+  - `checkenv` → verifica qué herramientas están instaladas (nmap, msfconsole, etc.).
+  - `portscan` → escaneo de puertos/servicios con nmap (top100, all, custom).
   - `cvesearch` → búsqueda de CVEs por servicio/versión.
   - `exploitsearch` → búsqueda de exploits públicos (Exploit-DB, etc.).
-  - `metasploit` → ejecución de módulos de Metasploit con opciones configurables.
-  - `shell` → ejecución de comandos de sistema (con confirmación siempre).
-  - `whois`, `websearch`, `whatweb` → reconocimiento pasivo y web.
-- **Reporte de pentest**: el agente genera un reporte estructurado con tabla de hallazgos,
-  severidad, CVE y recomendaciones al pedírselo (`"dame un reporte corto del pentest"`).
-- **Memoria de sesión**: recuerda targets, puertos, versiones y CVEs encontrados en la sesión
-  y los reutiliza como contexto.
-- **Proveedor configurable**: Ollama (local) u OpenRouter (remoto).
-- **Inferencia de parámetros**: `"mi PC"` → `127.0.0.1`, `"la red"` → `192.168.1.0/24`, etc.
+  - `metasploit` → ejecución de módulos de Metasploit con parámetros configurables.
+  - `shell` → ejecución de comandos del sistema (siempre con confirmación).
+  - `whois`, `websearch` → reconocimiento pasivo / OSINT.
+  - `sysinfo` → contexto del sistema local al inicio de la sesión.
 
-### Tools disponibles
+- **Reporte de pentest** (MVP):  
+  El agente puede generar un **reporte corto estructurado** cuando se le pide
+  (por ejemplo: `"dame un reporte corto del pentest"`), con:
+  - Resumen ejecutivo.
+  - Tabla de hallazgos (título, severidad, servicio/PUERTO, CVE).
+  - Detalle por hallazgo y recomendaciones.
 
-| Tool            | Descripción                                               |
-|-----------------|-----------------------------------------------------------|
-| `checkenv`      | Verifica el toolkit instalado (nmap, msfconsole, etc.)   |
-| `portscan`      | Escaneo de puertos y detección de versiones con nmap     |
-| `cvesearch`     | Búsqueda de CVEs por producto/versión                    |
-| `exploitsearch` | Búsqueda de exploits públicos (Exploit-DB, etc.)         |
-| `metasploit`    | Ejecución de módulos de Metasploit                       |
-| `shell`         | Ejecución de comandos de sistema (requiere confirmación) |
-| `whois`         | Consulta WHOIS de IPs y dominios                         |
-| `websearch`     | Búsqueda web de información OSINT                        |
-| `whatweb`       | Fingerprinting de servicios web                          |
-| `sysinfo`       | Información del sistema local                            |
+- **Memoria de sesión**:
+  - Recuerda targets, puertos, servicios, versiones y CVEs vistos en la sesión.
+  - Reutiliza ese contexto para siguientes pasos sin que tengas que repetirlo.
+
+- **Proveedor de modelo configurable**:
+  - [Ollama](https://ollama.com) para modelos locales.
+  - [OpenRouter](https://openrouter.ai) para modelos remotos.
+
+- **Inferencia de parámetros** (callejera pero útil):
+  - `"mi PC"` / `"localhost"` / `"mi máquina"` → `127.0.0.1`.
+  - `"la red"` / `"red local"` → `192.168.1.0/24`.
+  - Sin puertos → `top100`.
+  - `"todos los puertos"` → scan completo.
+  - CVE sin prefijo → agrega automáticamente `"CVE-"` si tiene formato año-id.
+
+---
+
+## 🔧 Tools disponibles
+
+Hoy el agente puede llamar a estas herramientas internas:
+
+| Tool            | Descripción                                                      |
+|-----------------|------------------------------------------------------------------|
+| `checkenv`      | Verifica el toolkit instalado (nmap, msfconsole, etc.)          |
+| `portscan`      | Escaneo de puertos / versiones con nmap                         |
+| `cvesearch`     | Búsqueda de CVEs por producto/versión                            |
+| `exploitsearch` | Búsqueda de exploits públicos (Exploit-DB, etc.)                |
+| `metasploit`    | Wrapper para ejecutar módulos de Metasploit (`msfconsole`)      |
+| `shell`         | Ejecución de comandos de sistema (requiere confirmación)        |
+| `whois`         | Consultas WHOIS de IPs y dominios                               |
+| `websearch`     | Búsqueda web/OSINT (resúmenes de resultados)                    |
+| `sysinfo`       | Información del sistema local (contexto inicial)               |
+
+La lista crecerá, pero el criterio es mantener **pocas tools bien integradas**, en lugar de una
+lista enorme que no se usa.
+
+---
+
+## 🔗 Integración con Metasploit (beta honesta)
+
+DeyaClaw no “sabe explotar todo”, pero ya puede ayudarte de forma útil con Metasploit:
+
+### Qué hace bien
+
+- Buscar exploits públicos relacionados a un CVE usando Exploit-DB.
+- Detectar si existe un módulo de Metasploit para ese CVE y mostrar el nombre (`exploit/...`).
+- Ejecutar módulos de Metasploit (auxiliary y exploit) desde lenguaje natural,
+  pidiendo confirmación previa.
+- Resumir el output de Metasploit en lenguaje claro (sin pegar la consola completa).
+
+> Nota: hoy el foco de la integración con Metasploit es **ayudarte a llegar rápido al módulo correcto y ejecutar comandos bien formados**, no “hackear solo”. Para exploits más complejos sigue siendo necesario ajustar manualmente algunos parámetros (shares, usuarios, payloads, etc.).
+
+### Limitaciones (importante leer)
+
+- Exploits complejos (por ejemplo, `exploit/linux/samba/is_known_pipename` para **CVE‑2017‑7494**)
+  siguen necesitando que el usuario ajuste manualmente parámetros específicos como:
+  - `SMB_SHARE_NAME` (share escribible).
+  - Credenciales (`SMBUser`, `SMBPass`).
+  - Payloads u opciones avanzadas.
+- La lógica de “primero enumero, después exploto” (por ejemplo, enumerar shares SMB antes de lanzar
+  un exploit) está descrita en el prompt y se está iterando; **no es 100% fiable ni general** aún.
+- El enfoque actual es: **ayudar a llegar rápido al módulo correcto y ejecutar comandos bien
+  formados**, no sustituir al operador humano.
+
+### Requisitos para Metasploit
+
+- Metasploit Framework instalado y accesible como `msfconsole`.
+- Módulos disponibles en una ruta estándar (por ejemplo:
+  `/opt/metasploit-framework/embedded/framework/modules`).
 
 ---
 
@@ -52,10 +117,10 @@ tareas ofensivas y defensivas de forma autónoma, encadenando herramientas de se
 ### Requisitos
 
 - Go 1.21+
-- [Ollama](https://ollama.com) (para modelos locales) **o** API key de [OpenRouter](https://openrouter.ai)
+- [Ollama](https://ollama.com) **o** API key de [OpenRouter](https://openrouter.ai)
 - `nmap`
 - `metasploit-framework` (`msfconsole`)
-- `theHarvester` _(opcional)_
+- `theHarvester` _(opcional, si querés ampliar reconocimiento)_  
 - `gobuster` _(opcional)_
 
 ### Build
@@ -81,11 +146,12 @@ go build -o deyaclaw .
 
 ### Comandos internos
 
-| Comando          | Acción                              |
-|------------------|-------------------------------------|
-| `/ayuda`         | Muestra ayuda                       |
-| `/modo redteam`  | Cambia el perfil del agente         |
-| `salir`          | Cierra el agente                    |
+| Comando            | Acción                                         |
+|--------------------|------------------------------------------------|
+| `/ayuda`           | Muestra ayuda y estado actual                  |
+| `/perfil`          | Muestra el perfil activo                       |
+| `/perfil <perfil>` | Cambia el perfil (`redteam`, `blueteam`, etc.) |
+| `salir`            | Cierra el agente                               |
 
 ---
 
@@ -97,10 +163,11 @@ go build -o deyaclaw .
   (vsftpd 2.3.4, Tomcat, etc.) para pruebas de explotación end-to-end.
 - [ ] **Flujo CVE → módulo Metasploit automático**: cuando el agente encuentre un CVE con módulo
   conocido, propondrá directamente el módulo a usar sin intervención del usuario.
-- [ ] **`parseMsfOutput` mejorado**: interpretación correcta de banners, sesiones abiertas
-  (shell/meterpreter) y errores de Metasploit, sin perder información en el filtrado.
-- [ ] **Nivel de autonomía "full auto"**: en modo `-autonomo`, el agente sigue su propio plan
-  recomendado sin necesidad de que el usuario elija entre pasos.
+- [ ] **`parseMsfOutput` mejorado**: 
+	- Interpretación correcta de banners
+	- Sesiones abiertas (shell/meterpreter) 
+	- Errores de Metasploit, sin perder información en el filtrado.
+- [ ] **Nivel de autonomía "full auto"**: en modo `-autonomo`, seguir un plan completo sin menús intermedios, siempre con límites claros en acciones destructivas.
 
 ### v0.3 — Reporte y persistencia
 
@@ -136,66 +203,73 @@ go build -o deyaclaw .
 ```
 deyaclaw/
 ├── main.go               # Entry point, flags (-perfil, -autonomo, -provider)
-├── agent/agent.go        # Loop principal (chat, confirmAction, isSafeTool)
-├── config/config.go      # Configuración (Autonomous, Mode, Provider)
-├── executor/executor.go  # Parsea JSON del LLM → ejecuta la Tool correspondiente
-├── session/session.go    # Memoria de sesión (hallazgos, targets, contexto)
-├── ollama/client.go      # Cliente HTTP para Ollama (local)
-├── openrouter/client.go  # Cliente HTTP para OpenRouter (remoto)
-└── tools/
-    ├── tool.go           # Interface Tool {Name, Description, Execute}
-    ├── checkenv.go       # Verifica toolkit instalado
-    ├── portscan.go       # nmap wrapper
-    ├── nmap.go           # nmap directo (alternativo)
-    ├── cvesearch.go      # Búsqueda de CVEs
-    ├── exploitsearch.go  # Búsqueda de exploits
-    ├── metasploit.go     # msfconsole wrapper con parseMsfOutput
-    ├── shell.go          # Ejecución de comandos del sistema
-    ├── whois.go          # Consultas WHOIS
-    ├── websearch.go      # Búsqueda web OSINT
-    ├── sysinfo.go        # Info del sistema local
-    └── sanitize.go       # Sanitización de inputs
+├── agent/
+│   └── agent.go          # Loop principal, chat, confirmAction, sesiones
+├── config/
+│   └── config.go         # Config (Autonomous, Mode, Provider, etc.)
+├── executor/
+│   └── executor.go       # Parsea JSON del LLM → ejecuta la Tool correspondiente
+├── session/
+│   └── session.go        # Manejo de sesiones e historial
+├── ollama/
+│   └── client.go         # Cliente HTTP para Ollama (local)
+├── openrouter/
+│   └── client.go         # Cliente HTTP para OpenRouter (remoto)
+├── tools/
+│   ├── tool.go           # Interface Tool {Name, Description, Execute}
+│   ├── checkenv.go       # Verifica toolkit instalado
+│   ├── portscan.go       # Wrapper nmap
+│   ├── nmap.go           # nmap directo (alternativa)
+│   ├── cvesearch.go      # Búsqueda de CVEs
+│   ├── exploitsearch.go  # Búsqueda de exploits públicos
+│   ├── metasploit.go     # Wrapper msfconsole + parseMsfOutput
+│   ├── shell.go          # Comandos de sistema
+│   ├── websearch.go      # Búsqueda web OSINT
+│   ├── whois.go          # WHOIS
+│   ├── sysinfo.go        # Info del sistema local
+│   └── sanitize.go       # Sanitización de outputs
+└── scripts/
+    ├── setup-pentest.sh      # (en progreso) helper para montar toolkit
+    └── update_msf_modules.sh # helper para refrescar cache de módulos MSF
 ```
 
-### Lógica de autonomía (agent.go)
+### Autonomía y seguridad
 
-- `isSafeTool(action string) bool`: devuelve `false` solo para `shell` y `metasploit`.
-  Todo lo demás se ejecuta sin confirmación en modo autónomo.
-- `confirmAction(preview string) bool`: muestra `⚡ DeyaClaw quiere ejecutar:` y acepta
-  `s/si/sí` como confirmación.
-- En modo `-autonomo`: las tools seguras se ejecutan directo; `shell` y `metasploit`
-  siguen pidiendo confirmación explícita al usuario.
+- `isSafeTool` marca como “sensibles” solo `shell` y `metasploit`.
+  En modo `-autonomo`:
+  - Tools seguras se ejecutan directo.
+  - Tools sensibles siempre piden confirmación.
+- El prompt del agente limita: 
+	- Qué herramientas puede usar.
+	- Qué comandos de sistema están permitidos.
+	- Cómo debe encadenar herramientas sin pedirte que elijas cada vez.
 
 ### Problema conocido activo: parseMsfOutput
 
-`parseMsfOutput` en `tools/metasploit.go` filtra demasiado agresivamente el output de
-`msfconsole`. Las líneas con `[*]` (informativas de Metasploit) son descartadas porque
-el regex de `important` no las captura.
-
-**Próximo fix**: ampliar el regex para incluir líneas `[*]` que contengan datos relevantes
-(versión, fingerprint, IP, `Scanned`, `completed`).
-
-### Integración Metasploit
-
-- El modelo a veces manda `options` como `map[RHOSTS:127.0.0.1 RPORT:22]` en lugar
-  de string `"RHOSTS=127.0.0.1 RPORT=22"`. Se instruyó al modelo en el prompt para
-  usar siempre formato string.
-- `Execute` en `metasploit.go` parsea el string con `strings.Fields` +
-  `strings.SplitN(opt, "=", 2)`.
-- El módulo `auxiliary/scanner/ssh/ssh_version` funciona correctamente invocado directo
-  desde `msfconsole`, pero el output con `[*]` no es capturado por el filtro actual.
-
+- `parseMsfOutput` todavía filtra más de la cuenta en algunos casos.
+- Encadenamientos avanzados (ej. enumerar shares SMB y después explotar) todavía dependen mucho del modelo y requieren supervisión humana.
 ---
 
 ## ⚠️ Disclaimer
 
-DeyaClaw está diseñado para uso en **entornos de laboratorio controlados y sistemas propios**.
-El uso de este software contra sistemas sin autorización explícita es **ilegal** y va en contra
-de la ética del hacking responsable. Los autores no se responsabilizan por el uso indebido
-de esta herramienta.
+DeyaClaw está diseñado para uso en **laboratorios de práctica** y **sistemas propios o
+explícitamente autorizados**.
+El uso contra sistemas sin autorización es **ilegal** y contrario a la ética del hacking
+responsable. Los autores no se responsabilizan por el uso indebido de esta herramienta.
 
 ---
 
+## 🙌 Agradecimientos
+
+Un agradecimiento especial a la comunidad de **#RemoteExecution** ([foro.remoteexecution.org](https://foro.remoteexecution.org)) por el feedback, las ideas y el testing en entornos reales de laboratorio.
+
+---
 ## 📄 Licencia
 
-MIT
+MIT — uso, copia, modificación y distribución permitidos, con la condición
+de mantener el aviso de copyright y el aviso de licencia.
+
+---
+
+Autor: [Juan O. Tejeda](https://github.com/juanotejeda)  
+Si encontrás bugs o tenés ideas, abrí un issue o PR en el repo.
