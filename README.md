@@ -1,4 +1,4 @@
-# 🦞 DeyaClaw
+	# 🦞 DeyaClaw
 
 **Agente autónomo de ciberseguridad local**, powered by [Ollama](https://ollama.com) / [OpenRouter](https://openrouter.ai).
 
@@ -130,6 +130,14 @@ git clone https://github.com/juanotejeda/deyaclaw.git
 cd deyaclaw
 go build -o deyaclaw .
 ```
+### Perfiles por defecto
+Para usar los mismos perfiles (redteam, blueteam, docente, general) con los que se desarrolla DeyaClaw, copiá los JSON incluidos en el repositorio a tu home:
+
+```bash
+mkdir -p ~/.deyaclaw/profiles
+cp profiles/*.json ~/.deyaclaw/profiles/
+```
+Si no copiás estos perfiles, igual podés usar el flag -perfil, pero algunos comandos internos como /perfil redteam mostrarán un mensaje indicando que el perfil JSON no existe aún.
 
 ### Uso
 
