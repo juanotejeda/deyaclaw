@@ -223,6 +223,10 @@ deyaclaw/
 │   └── client.go         # Cliente HTTP para Ollama (local)
 ├── openrouter/
 │   └── client.go         # Cliente HTTP para OpenRouter (remoto)
+├── profiles/
+│   ├── blueteam.json     # Configuracion perfil blueteam
+│   ├── profesor.json     # Configuracion perfil profesor o docente
+│   └── redteam.json      # Configuracion perfil redteam
 ├── tools/
 │   ├── tool.go           # Interface Tool {Name, Description, Execute}
 │   ├── checkenv.go       # Verifica toolkit instalado
